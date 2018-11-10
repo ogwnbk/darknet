@@ -573,41 +573,93 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
     char buff[256];
     char *input = buff;
     float nms=.45;
+
+    FILE* darknet_in = NULL;
+    FILE* darknet_out = NULL;
     while(1){
+        printf("-------------------------------------------------\n");
         if(filename){
             strncpy(input, filename, 256);
         } else {
-            printf("Enter Image Path: ");
+            darknet_out = fopen("/usr/lib/cgi-bin/darknet_out", "w");
+            darknet_in = fopen("/usr/lib/cgi-bin//darknet_in", "r");
+            //printf("Enter Image Path: ");
             fflush(stdout);
-            input = fgets(input, 256, stdin);
-            if(!input) return;
+            input = fgets(input, 256, darknet_in);
+            //if(!input) return;
+            if(!input) continue;
             strtok(input, "\n");
+	    printf("Image Path: %s\n", input);
         }
+        time=what_time_is_it_now();
         image im = load_image_color(input,0,0);
+
+	// ファイル読み込み時間
+	double load_image_time = what_time_is_it_now() - time;
+	printf("Load image time: %f\n", load_image_time);
+
+        time=what_time_is_it_now();
         image sized = letterbox_image(im, net->w, net->h);
+
+	// リサイズ時間
+	double resize_image_time = what_time_is_it_now() - time;
+	printf("Resize time: %f\n", resize_image_time);
+	
         //image sized = resize_image(im, net->w, net->h);
         //image sized2 = resize_max(im, net->w);
         //image sized = crop_image(sized2, -((net->w - sized2.w)/2), -((net->h - sized2.h)/2), net->w, net->h);
         //resize_network(net, sized.w, sized.h);
         layer l = net->layers[net->n-1];
 
-
         float *X = sized.data;
         time=what_time_is_it_now();
+
+	// 画像解析本体
         network_predict(net, X);
+
         printf("%s: Predicted in %f seconds.\n", input, what_time_is_it_now()-time);
+	// pipeに検出された時間を出力
+	if(darknet_out){
+	  fprintf(darknet_out, "%s: Predicted in %f seconds.\n", input, what_time_is_it_now()-time);
+	}
         int nboxes = 0;
         detection *dets = get_network_boxes(net, im.w, im.h, thresh, hier_thresh, 0, 1, &nboxes);
         //printf("%d\n", nboxes);
         //if (nms) do_nms_obj(boxes, probs, l.w*l.h*l.n, l.classes, nms);
         if (nms) do_nms_sort(dets, nboxes, l.classes, nms);
+
+	// 検出したイメージをpipeに書き込む
+	if (darknet_out) {
+	  int classes = l.classes;
+	  int num = nboxes;
+	  int i,j;
+	  for(i = 0; i < num; ++i){
+	    char labelstr[4096] = {0};
+	    int class = -1;
+	    for(j = 0; j < classes; ++j){
+	      if (dets[i].prob[j] > thresh){
+                if (class < 0) {
+		  strcat(labelstr, names[j]);
+		  class = j;
+                } else {
+		  strcat(labelstr, ", ");
+		  strcat(labelstr, names[j]);
+                }
+                fprintf(darknet_out, "%s: %.0f%%\n", names[j], dets[i].prob[j]*100);
+	      }
+	    }
+	  }
+
+	  fprintf(darknet_out, "Complete!!\n");
+	}
+ 
         draw_detections(im, dets, nboxes, thresh, names, alphabet, l.classes);
         free_detections(dets, nboxes);
         if(outfile){
             save_image(im, outfile);
         }
         else{
-            save_image(im, "predictions");
+            save_image(im, "/var/www/html/predictions");
 #ifdef OPENCV
             make_window("predictions", 512, 512, 0);
             show_image(im, "predictions", 0);
@@ -617,6 +669,11 @@ void test_detector(char *datacfg, char *cfgfile, char *weightfile, char *filenam
         free_image(im);
         free_image(sized);
         if (filename) break;
+	// pipeをclose
+	if(darknet_out){
+	  fclose(darknet_in);
+	  fclose(darknet_out);
+	}
     }
 }
 
