@@ -5,16 +5,20 @@ if [ ! -e "yolov3.weights" ]; then
 fi
 
 sudo chmod 777 /usr/lib/cgi-bin/
+sudo chmod 777 /var/www/html/
 mkfifo /usr/lib/cgi-bin/darknet_in
 mkfifo /usr/lib/cgi-bin/darknet_out
+chmod 666 /usr/lib/cgi-bin/darknet_in
+chmod 666 /usr/lib/cgi-bin/darknet_out
 
+chmod 755 darknet.cgi
 cp darknet.cgi /usr/lib/cgi-bin/
-chmod 755 /usr/lib/cgi-bin/darknet.cgi
-sudo a2enmod cgid
-sudo apt install libcgi-pm-perl
 
 sudo apt install apache2
+sudo a2enmod cgid
+sudo apt install libcgi-pm-perl
 sudo service apache2 start
 
-make
+#チューニングするならthreshオプションで。
+#sudo ./darknet detect cfg/yolov3.cfg yolov3.weights -thresh .1
 sudo ./darknet detect cfg/yolov3.cfg yolov3.weights
