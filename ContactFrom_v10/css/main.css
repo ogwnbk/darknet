@@ -378,3 +378,11 @@ textarea.input100 {
     opacity: 1;
   }
 }
+
+label {
+  color: white;  
+  background-color: red;
+  padding: 6px;
+  border-radius: 12px;
+}
+

@@ -14,6 +14,12 @@ chmod 666 /usr/lib/cgi-bin/darknet_out
 chmod 755 darknet.cgi
 cp darknet.cgi /usr/lib/cgi-bin/
 
+cp -a ContactFrom_v10/css /var/www/html/
+cp -a ContactFrom_v10/fonts /var/www/html/
+cp -a ContactFrom_v10/images /var/www/html/
+cp -a ContactFrom_v10/js /var/www/html/
+cp -a ContactFrom_v10/vendor /var/www/html/
+
 sudo apt install apache2
 sudo a2enmod cgid
 sudo apt install libcgi-pm-perl
